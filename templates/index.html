@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Country Output Lines</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        .output-line {
+            font-family: monospace;
+            font-size: 18px;
+            margin: 10px 0;
+            background-color: #2d2d2d;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .continent-name {
+            font-weight: bold;
+            margin-top: 20px;
+            color: #4ec9b0;
+        }
+
+        .country-count {
+            color: #888;
+            font-size: 0.9em;
+            margin-left: 8px;
+        }
+
+        .letter {
+            padding: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .number {
+            padding: 2px 0;
+            margin-left: -2px;
+            color: #888;
+            cursor: default;
+            display: inline-block;
+        }
+
+        .letter:hover {
+            background-color: #404040;
+        }
+
+        #countries-display {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #404040;
+            border-radius: 5px;
+            display: none;
+            background-color: #2d2d2d;
+        }
+
+        h1 {
+            color: #569cd6;
+        }
+
+        #countries-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        #countries-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #404040;
+        }
+
+        #countries-list li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Country Output Lines</h1>
+    <p>Click on any letter in the output lines to see the countries that start with that letter.</p>
+    
+    {% for continent, line in continent_lines.items() %}
+        <div class="continent-name">
+            {{ continent }}
+            <span class="country-count">({{ continent_counts[continent] }} countries)</span>
+        </div>
+        <div class="output-line" data-continent="{{ continent }}">
+            {% for char in line %}
+                {% if char.isalpha() %}
+                    <span class="letter" data-letter="{{ char }}">{{ char }}</span>
+                {% else %}
+                    <span class="number">{{ char }}</span>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    <div id="countries-display">
+        <h3 id="countries-header"></h3>
+        <ul id="countries-list"></ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const letters = document.querySelectorAll('.letter');
+            const countriesDisplay = document.getElementById('countries-display');
+            const countriesHeader = document.getElementById('countries-header');
+            const countriesList = document.getElementById('countries-list');
+
+            letters.forEach(letter => {
+                letter.addEventListener('click', async function() {
+                    const continent = this.closest('.output-line').dataset.continent;
+                    const letterValue = this.dataset.letter;
+                    
+                    const response = await fetch(`/get_countries/${continent}/${letterValue}`);
+                    const countries = await response.json();
+
+                    countriesHeader.textContent = `Countries in ${continent} starting with '${letterValue}':`;
+                    countriesList.innerHTML = countries
+                        .map(country => `<li>${country}</li>`)
+                        .join('');
+                    countriesDisplay.style.display = 'block';
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
