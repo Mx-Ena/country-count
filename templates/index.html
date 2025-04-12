@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Country Output Lines</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background-color: #1e1e1e;
@@ -77,6 +78,46 @@
         #countries-list li:last-child {
             border-bottom: none;
         }
+
+        .chart-container {
+            margin: 20px 0;
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            position: relative;
+        }
+        
+        .chart-title {
+            color: #4ec9b0;
+            margin-bottom: 10px;
+        }
+
+        .custom-tooltip {
+            background-color: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            max-width: 300px;
+            position: absolute;
+            z-index: 1000;
+        }
+
+        .custom-tooltip ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .custom-tooltip li {
+            padding: 2px 0;
+            border-bottom: 1px solid #404040;
+        }
+
+        .custom-tooltip li:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -97,6 +138,11 @@
                 {% endif %}
             {% endfor %}
         </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">Country Distribution by Starting Letter - {{ continent }}</div>
+            <canvas id="chart-{{ continent }}"></canvas>
+        </div>
     {% endfor %}
 
     <div id="countries-display">
@@ -110,6 +156,142 @@
             const countriesDisplay = document.getElementById('countries-display');
             const countriesHeader = document.getElementById('countries-header');
             const countriesList = document.getElementById('countries-list');
+            let currentTooltip = null;
+
+            // Create charts for each continent
+            document.querySelectorAll('.output-line').forEach(outputLine => {
+                const continent = outputLine.dataset.continent;
+                const ctx = document.getElementById(`chart-${continent}`);
+                const letterCounts = {};
+                const countryLists = {};
+                let currentLetter = '';
+                
+                // Parse the output line to get counts
+                outputLine.querySelectorAll('.letter, .number').forEach(element => {
+                    if (element.classList.contains('letter')) {
+                        currentLetter = element.dataset.letter;
+                        letterCounts[currentLetter] = 1;
+                        countryLists[currentLetter] = [];
+                    } else if (element.classList.contains('number') && currentLetter) {
+                        letterCounts[currentLetter] = parseInt(element.textContent);
+                    }
+                });
+
+                // Fetch countries for each letter
+                Object.keys(letterCounts).forEach(async letter => {
+                    const response = await fetch(`/get_countries/${continent}/${letter}`);
+                    const countries = await response.json();
+                    countryLists[letter] = countries;
+                });
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(letterCounts),
+                        datasets: [{
+                            label: 'Number of Countries',
+                            data: Object.values(letterCounts),
+                            backgroundColor: 'rgba(78, 201, 176, 0.5)',
+                            borderColor: 'rgba(78, 201, 176, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#ffffff',
+                                    stepSize: 1
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#ffffff'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#ffffff'
+                                }
+                            },
+                            tooltip: {
+                                enabled: false,
+                                external: function(context) {
+                                    // Remove any existing tooltip
+                                    if (currentTooltip) {
+                                        currentTooltip.remove();
+                                        currentTooltip = null;
+                                    }
+
+                                    if (context.tooltip.opacity === 0) {
+                                        return;
+                                    }
+
+                                    const tooltipEl = document.createElement('div');
+                                    tooltipEl.classList.add('custom-tooltip');
+                                    
+                                    const letter = context.tooltip.dataPoints[0].label;
+                                    const countries = countryLists[letter] || [];
+                                    
+                                    tooltipEl.innerHTML = `
+                                        <strong>${letter} (${countries.length} countries)</strong>
+                                        <ul>
+                                            ${countries.map(country => `<li>${country}</li>`).join('')}
+                                        </ul>
+                                    `;
+                                    
+                                    const position = context.chart.canvas.getBoundingClientRect();
+                                    const tooltipWidth = 300; // Fixed width
+                                    const tooltipHeight = tooltipEl.offsetHeight;
+                                    const viewportHeight = window.innerHeight;
+                                    
+                                    // Calculate position to keep tooltip within viewport
+                                    let left = position.left + context.tooltip.caretX;
+                                    let top = position.top + context.tooltip.caretY;
+                                    
+                                    // Adjust horizontal position if tooltip would go off-screen
+                                    if (left + tooltipWidth > window.innerWidth) {
+                                        left = window.innerWidth - tooltipWidth - 10;
+                                    }
+                                    
+                                    // Adjust vertical position if tooltip would go off-screen
+                                    if (top + tooltipHeight > viewportHeight) {
+                                        top = viewportHeight - tooltipHeight - 10;
+                                    }
+                                    
+                                    tooltipEl.style.left = left + 'px';
+                                    tooltipEl.style.top = top + 'px';
+                                    tooltipEl.style.pointerEvents = 'none';
+                                    
+                                    document.body.appendChild(tooltipEl);
+                                    currentTooltip = tooltipEl;
+                                    
+                                    return {
+                                        element: tooltipEl,
+                                        destroy: function() {
+                                            if (currentTooltip === tooltipEl) {
+                                                tooltipEl.remove();
+                                                currentTooltip = null;
+                                            }
+                                        }
+                                    };
+                                }
+                            }
+                        }
+                    }
+                });
+            });
 
             letters.forEach(letter => {
                 letter.addEventListener('click', async function() {

@@ -3,6 +3,9 @@ import json
 
 app = Flask(__name__)
 
+# Enable debug mode for development
+app.debug = True
+
 # Load the country data
 CONTINENT_COUNTRY_MAP = {
     "Africa": ["Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cameroon", "Cape Verde", "Central African Republic", "Chad", "Comoros", "Congo", "Democratic Republic of the Congo", "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Ivory Coast", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda", "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan", "Sudan", "Swaziland", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe"],
@@ -52,4 +55,4 @@ def get_countries(continent, letter):
     return jsonify(matching_countries)
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(host='0.0.0.0', port=5000, debug=True)
