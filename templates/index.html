@@ -100,7 +100,7 @@
             padding: 10px;
             color: white;
             max-width: 300px;
-            position: absolute;
+            position: fixed;
             z-index: 1000;
         }
 
@@ -251,14 +251,20 @@
                                         </ul>
                                     `;
                                     
-                                    const position = context.chart.canvas.getBoundingClientRect();
-                                    const tooltipWidth = 300; // Fixed width
-                                    const tooltipHeight = tooltipEl.offsetHeight;
-                                    const viewportHeight = window.innerHeight;
+                                    // Get the mouse position relative to the viewport
+                                    const mouseX = context.tooltip.caretX;
+                                    const mouseY = context.tooltip.caretY;
                                     
-                                    // Calculate position to keep tooltip within viewport
-                                    let left = position.left + context.tooltip.caretX;
-                                    let top = position.top + context.tooltip.caretY;
+                                    // Get the chart's position relative to the viewport
+                                    const chartRect = context.chart.canvas.getBoundingClientRect();
+                                    
+                                    // Calculate tooltip dimensions
+                                    const tooltipWidth = 300;
+                                    const tooltipHeight = tooltipEl.offsetHeight;
+                                    
+                                    // Calculate initial position
+                                    let left = chartRect.left + mouseX;
+                                    let top = chartRect.top + mouseY;
                                     
                                     // Adjust horizontal position if tooltip would go off-screen
                                     if (left + tooltipWidth > window.innerWidth) {
@@ -266,8 +272,12 @@
                                     }
                                     
                                     // Adjust vertical position if tooltip would go off-screen
-                                    if (top + tooltipHeight > viewportHeight) {
-                                        top = viewportHeight - tooltipHeight - 10;
+                                    if (top - tooltipHeight < 0) {
+                                        // If tooltip would go above viewport, show it below
+                                        top = chartRect.top + mouseY + 20;
+                                    } else {
+                                        // Show tooltip above the point
+                                        top = chartRect.top + mouseY - tooltipHeight - 10;
                                     }
                                     
                                     tooltipEl.style.left = left + 'px';
